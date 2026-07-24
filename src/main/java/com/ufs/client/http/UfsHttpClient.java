@@ -2,6 +2,7 @@ package com.ufs.client.http;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.ufs.client.auth.JwtAuthenticator;
@@ -10,6 +11,7 @@ import com.ufs.client.model.ApiResponse;
 import okhttp3.*;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -45,6 +47,26 @@ public class UfsHttpClient {
                 .get()
                 .build();
         return execute(request, dataType);
+    }
+
+    /** GET 请求并反序列化为 List&lt;T&gt;，保留泛型信息。 */
+    @SuppressWarnings("unchecked")
+    public <T> List<T> getList(String path, Class<T> elementType) {
+        return (List<T>) getList(path, elementType, Map.of());
+    }
+
+    /** GET 请求 + 查询参数 → List&lt;T&gt; */
+    @SuppressWarnings("unchecked")
+    public <T> List<T> getList(String path, Class<T> elementType, Map<String, String> queryParams) {
+        String url = buildUrl(path, queryParams);
+        Request request = new Request.Builder()
+                .url(url)
+                .header("Authorization", "Bearer " + auth.getToken())
+                .get()
+                .build();
+        JavaType listType = mapper.getTypeFactory().constructCollectionType(List.class, elementType);
+        JavaType apiRespType = mapper.getTypeFactory().constructParametricType(ApiResponse.class, listType);
+        return executeApi(request, apiRespType);
     }
 
     public <T> ApiResponse.PageResult<T> getPage(String path, Class<T> dataType, Map<String, String> queryParams) {
@@ -114,14 +136,22 @@ public class UfsHttpClient {
         return sb.toString();
     }
 
+    /** 将 Class&lt;T&gt; 包装为 ApiResponse&lt;T&gt; 后反序列化 */
     private <T> T execute(Request request, Class<T> dataType) {
+        JavaType apiRespType = mapper.getTypeFactory()
+                .constructParametricType(ApiResponse.class, mapper.constructType(dataType));
+        return executeApi(request, apiRespType);
+    }
+
+    /** 核心反序列化方法：apiResponseType 是完整的 ApiResponse&lt;T&gt; JavaType */
+    @SuppressWarnings("unchecked")
+    private <T> T executeApi(Request request, JavaType apiResponseType) {
         try (Response response = httpClient.newCall(request).execute()) {
             String bodyStr = response.body() != null ? response.body().string() : "{}";
             if (!response.isSuccessful()) {
                 throw new UfsClientException(response.code(), "HTTP " + response.code() + ": " + bodyStr);
             }
-            ApiResponse<T> apiResp = mapper.readValue(bodyStr,
-                    mapper.getTypeFactory().constructParametricType(ApiResponse.class, dataType));
+            ApiResponse<T> apiResp = mapper.readValue(bodyStr, apiResponseType);
             if (!apiResp.isSuccess()) {
                 throw new UfsClientException(apiResp.getCode(), apiResp.getMessage());
             }

@@ -35,10 +35,15 @@ public class UfsClient implements AutoCloseable {
     private final HealthApi health;
 
     public UfsClient(UfsClientConfig config) {
-        this.httpClient = new OkHttpClient.Builder()
+        this(config, new OkHttpClient.Builder()
                 .connectTimeout(config.getConnectTimeoutMs(), TimeUnit.MILLISECONDS)
                 .readTimeout(config.getReadTimeoutMs(), TimeUnit.MILLISECONDS)
-                .build();
+                .build());
+    }
+
+    /** 测试用构造函数：注入自定义 OkHttpClient（如指向 MockWebServer） */
+    UfsClient(UfsClientConfig config, OkHttpClient httpClient) {
+        this.httpClient = httpClient;
         this.auth = new JwtAuthenticator(config, httpClient);
         this.http = new UfsHttpClient(config.getBaseUrl(), httpClient, auth);
 

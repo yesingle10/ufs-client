@@ -42,6 +42,13 @@
             <version>5.10.3</version>
             <scope>test</scope>
         </dependency>
+        <!-- MockWebServer (OkHttp 官方 HTTP mock) -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>mockwebserver</artifactId>
+            <version>4.12.0</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

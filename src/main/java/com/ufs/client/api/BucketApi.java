@@ -18,9 +18,8 @@ public class BucketApi {
     }
 
     /** 列举当前租户所有桶 */
-    @SuppressWarnings("unchecked")
     public List<Bucket> list() {
-        return (List<Bucket>) http.get("/api/v1/buckets", List.class);
+        return http.getList("/api/v1/buckets", Bucket.class);
     }
 
     /** 获取单个桶详情 */

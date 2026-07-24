@@ -18,9 +18,8 @@ public class PolicyApi {
     }
 
     /** 列举活跃策略 */
-    @SuppressWarnings("unchecked")
     public List<StoragePolicy> listActive() {
-        return (List<StoragePolicy>) http.get("/api/v1/policies/active", List.class);
+        return http.getList("/api/v1/policies/active", StoragePolicy.class);
     }
 
     /** 获取单个策略 */
